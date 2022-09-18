@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "todo"
+version = "0.1.0"
+description = ""
+authors = ["hans <hans@fwtn.be>"]
+readme = "README.md"
+packages = [{include = "todo", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+quart = "^0.18.0"
+python-dotenv = "^0.21.0"
+
+
+[tool.poetry.group.dev.dependencies]
+autopep8 = "^1.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+start = "todo:run"
