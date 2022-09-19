@@ -157,3 +157,4 @@ def create_repository() -> ABCTodoRepository:
         case "memory": return InMemoryTodoRepsitory()
         case "sqlite": return SQLiteTodoRepository()
         case "mongo": return MongoTodoRepository()
+        case _: raise Exception("Invalid or missing PERSISTENCY environment variable")
