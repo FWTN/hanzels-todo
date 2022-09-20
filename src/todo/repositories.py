@@ -9,7 +9,6 @@ from .models import Todo
 from pymongo import MongoClient
 
 
-
 class TodoNotFoundException(Exception):
     def __init__(self, id: str) -> None:
         message = f"Todo with ID: {id} was not found"
@@ -19,31 +18,24 @@ class TodoNotFoundException(Exception):
 def sql_from_file(filename: str) -> str:
     sql_path = os.path.dirname(os.path.realpath(__file__)) + "/sql/" + filename
     with open(sql_path) as f:
-        sql = f.read()
-    return sql
+        return f.read()
 
 
 class ABCTodoRepository(ABC):
     @abstractclassmethod
-    def connect(self) -> None: return None
-
+    def connect(self) -> None: ...
     @abstractclassmethod
-    def disconnect(self) -> None: return None
-
+    def disconnect(self) -> None: ...
     @abstractclassmethod
-    def find_all(self) -> list[Todo]: return None
-
+    def find_all(self) -> list[Todo]: ...
     @abstractclassmethod
-    def find_by_id(self, id: str) -> Todo: return None
-
+    def find_by_id(self, id: str) -> Todo: ...
     @abstractclassmethod
-    def create(self, todo: Todo) -> Todo: return None
-
+    def create(self, todo: Todo) -> Todo: ...
     @abstractclassmethod
-    def delete(self, id: str) -> None: return None
-
+    def delete(self, id: str) -> None: ...
     @abstractclassmethod
-    def update(self, todo: Todo) -> Todo: return None
+    def update(self, todo: Todo) -> Todo: ...
 
 
 class InMemoryTodoRepsitory(ABCTodoRepository):
@@ -58,11 +50,8 @@ class InMemoryTodoRepsitory(ABCTodoRepository):
                  "Eat MC Donalds", datetime.now(), 0, None),
         ]
 
-    def connect(self) -> None:
-        pass
-
-    def disconnect(self) -> None:
-        pass
+    def connect(self) -> None: pass
+    def disconnect(self) -> None: pass
 
     def find_all(self) -> list[Todo]:
         return self.todos
@@ -136,19 +125,19 @@ class MongoTodoRepository(ABCTodoRepository):
             username=os.environ.get("MONGO_USER"),
             password=os.environ.get("MONGO_PASS")
         )
-        
+
         try:
             self.client.rptodos.todos.drop()
         except Exception as ex:
             pass
-        
+
         # initialize database
         todo1 = Todo(UUID('00000000-0000-0000-0000-000000000001'),
-                 "Do your first thing", datetime.now(), 0, None)
+                     "Do your first thing", datetime.now(), 0, None)
         todo2 = Todo(UUID('00000000-0000-0000-0000-000000000002'),
-                 "Do 7 push ups", datetime.now(), 0, None)
+                     "Do 7 push ups", datetime.now(), 0, None)
         todo3 = Todo(UUID('00000000-0000-0000-0000-000000000003'),
-                 "Eat MC Donalds", datetime.now(), 0, None)
+                     "Eat MC Donalds", datetime.now(), 0, None)
         self.create(todo1)
         self.create(todo2)
         self.create(todo3)
@@ -158,7 +147,8 @@ class MongoTodoRepository(ABCTodoRepository):
 
     def find_all(self) -> list[Todo]:
         db = self.client.rptodos
-        todos = [ Todo(x.get("_id").as_uuid(), x.get('text'), x.get('status'), x.get('create_time'), x.get('validate_time')) for x in db.todos.find()]
+        todos = [Todo(x.get("_id").as_uuid(), x.get('text'), x.get('status'), x.get(
+            'create_time'), x.get('validate_time')) for x in db.todos.find()]
         return todos
 
     def find_by_id(self, id: str):
