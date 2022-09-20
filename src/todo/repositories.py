@@ -1,10 +1,13 @@
+import os
+import sqlite3
+import bson
 from abc import ABC, abstractclassmethod
 from datetime import datetime
 from operator import indexOf
 from uuid import UUID, uuid1
 from .models import Todo
-import os
-import sqlite3
+from pymongo import MongoClient
+
 
 
 class TodoNotFoundException(Exception):
@@ -64,12 +67,9 @@ class InMemoryTodoRepsitory(ABCTodoRepository):
     def find_all(self) -> list[Todo]:
         return self.todos
 
-    def find_by_id(self, id: str) -> Todo:
-        one_item_list = [x for x in self.todos if x.id == UUID(id)]
-        if one_item_list:
-            return one_item_list[0]
-        else:
-            raise TodoNotFoundException(id)
+    def find_by_id(self, id: str) -> Todo | None:
+        item, _ = [x for x in self.todos if x.id == UUID(id)]
+        return item
 
     def create(self, todo: Todo) -> Todo:
         self.todos.append(todo)
@@ -130,19 +130,50 @@ class SQLiteTodoRepository(ABCTodoRepository):
 
 class MongoTodoRepository(ABCTodoRepository):
     def connect(self) -> None:
-        raise Exception("Not implemented")
+        self.client = MongoClient(
+            host=os.environ.get("MONGO_HOST"),
+            port=int(os.environ.get("MONGO_PORT")),
+            username=os.environ.get("MONGO_USER"),
+            password=os.environ.get("MONGO_PASS")
+        )
+        
+        try:
+            self.client.rptodos.todos.drop()
+        except Exception as ex:
+            pass
+        
+        # initialize database
+        todo1 = Todo(UUID('00000000-0000-0000-0000-000000000001'),
+                 "Do your first thing", datetime.now(), 0, None)
+        todo2 = Todo(UUID('00000000-0000-0000-0000-000000000002'),
+                 "Do 7 push ups", datetime.now(), 0, None)
+        todo3 = Todo(UUID('00000000-0000-0000-0000-000000000003'),
+                 "Eat MC Donalds", datetime.now(), 0, None)
+        self.create(todo1)
+        self.create(todo2)
+        self.create(todo3)
 
     def disconnect(self) -> None:
-        raise Exception("Not implemented")
+        self.client.close()
 
     def find_all(self) -> list[Todo]:
-        raise Exception("Not implemented")
+        db = self.client.rptodos
+        todos = [ Todo(x.get("_id").as_uuid(), x.get('text'), x.get('status'), x.get('create_time'), x.get('validate_time')) for x in db.todos.find()]
+        return todos
 
     def find_by_id(self, id: str):
         raise Exception("Not implemented")
 
     def create(self, todo: Todo) -> Todo:
-        raise Exception("Not implemented")
+        db = self.client.rptodos
+        todos = db.todos
+        todos.insert_one({
+            "_id": bson.Binary.from_uuid(todo.id),
+            "text": todo.text,
+            "status": todo.status,
+            "create_time": todo.create_time,
+            "resolve_time": todo.resolve_time
+        })
 
     def update(self, todo: Todo) -> Todo:
         raise Exception("Not implemented")

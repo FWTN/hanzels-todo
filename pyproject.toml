@@ -10,6 +10,7 @@ packages = [{include = "todo", from = "src"}]
 python = "^3.10"
 quart = "^0.18.0"
 python-dotenv = "^0.21.0"
+pymongo = "^4.2.0"
 
 
 [tool.poetry.group.dev.dependencies]
