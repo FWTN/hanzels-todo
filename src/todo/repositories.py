@@ -21,19 +21,34 @@ def sql_from_file(filename: str) -> str:
         return f.read()
 
 
+def create_repository() -> "ABCTodoRepository":
+    """Create repository based on value contained in PERSISTENCY enviroment variable"""
+    match os.environ.get('PERSISTENCY'):
+        case "memory": return InMemoryTodoRepsitory()
+        case "sqlite": return SQLiteTodoRepository()
+        case "mongo": return MongoTodoRepository()
+        case _: raise Exception("Invalid or missing PERSISTENCY environment variable")
+
+
 class ABCTodoRepository(ABC):
     @abstractclassmethod
     def connect(self) -> None: ...
+    
     @abstractclassmethod
     def disconnect(self) -> None: ...
+    
     @abstractclassmethod
     def find_all(self) -> list[Todo]: ...
+    
     @abstractclassmethod
     def find_by_id(self, id: str) -> Todo: ...
+    
     @abstractclassmethod
     def create(self, todo: Todo) -> Todo: ...
+    
     @abstractclassmethod
     def delete(self, id: str) -> None: ...
+    
     @abstractclassmethod
     def update(self, todo: Todo) -> Todo: ...
 
@@ -57,8 +72,11 @@ class InMemoryTodoRepsitory(ABCTodoRepository):
         return self.todos
 
     def find_by_id(self, id: str) -> Todo | None:
-        item, _ = [x for x in self.todos if x.id == UUID(id)]
-        return item
+        items = [x for x in self.todos if x.id == UUID(id)]
+        if items:
+            return items[0]
+        else:
+            raise TodoNotFoundException(id) 
 
     def create(self, todo: Todo) -> Todo:
         self.todos.append(todo)
@@ -70,6 +88,7 @@ class InMemoryTodoRepsitory(ABCTodoRepository):
     def update(self, todo: Todo) -> Todo:
         index = self.todos.index(todo)
         self.todos[index] = todo
+        return todo
 
 
 class SQLiteTodoRepository(ABCTodoRepository):
@@ -125,11 +144,7 @@ class MongoTodoRepository(ABCTodoRepository):
             username=os.environ.get("MONGO_USER"),
             password=os.environ.get("MONGO_PASS")
         )
-
-        try:
-            self.client.rptodos.todos.drop()
-        except Exception as ex:
-            pass
+        self.client.rptodos.todos.drop()
 
         # initialize database
         todo1 = Todo(UUID('00000000-0000-0000-0000-000000000001'),
@@ -170,12 +185,3 @@ class MongoTodoRepository(ABCTodoRepository):
 
     def delete(self, id: str) -> None:
         raise Exception("Not implemented")
-
-
-def create_repository() -> ABCTodoRepository:
-    """Create repository based on value contained in PERSISTENCY enviroment variable"""
-    match os.environ.get('PERSISTENCY'):
-        case "memory": return InMemoryTodoRepsitory()
-        case "sqlite": return SQLiteTodoRepository()
-        case "mongo": return MongoTodoRepository()
-        case _: raise Exception("Invalid or missing PERSISTENCY environment variable")

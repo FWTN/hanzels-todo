@@ -1,8 +1,19 @@
-from datetime import datetime
-from uuid import UUID, uuid1
 from todo import app, repository
 from todo.models import Todo
-from quart import request, render_template
+from quart import request, render_template, jsonify
+from functools import wraps
+
+
+def error_catcher(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return jsonify(
+                await func(*args, **kwargs)
+            )
+        except Exception as ex:
+            return {"error": str(ex)}
+    return wrapper
 
 
 @app.get('/')
@@ -11,60 +22,35 @@ async def index():
 
 
 @app.get('/todo')
+@error_catcher
 async def todo_list():
-    data = repository.find_all()
-    return {"message": "succes", "data": data}
+    return repository.find_all()
 
 
 @app.get('/todo/<id>')
+@error_catcher
 async def todo_by_id(id: str):
-    try:
-        data = repository.find_by_id(id)
-        return {"message": "succes", "data": data}
-
-    except Exception as ex:
-        return {"message": "failure", "error": str(ex)}
+    return repository.find_by_id(id)
 
 
 @app.post('/todo')
+@error_catcher
 async def new_toto():
     data = await request.json
-    try:
-        todo = repository.create(
-            Todo(id=uuid1(),
-                 text=data["text"],
-                 create_time=datetime.now(),
-                 status=0,
-                 resolve_time=None)
-        )
-        return {"message": "success", "data": todo}
-
-    except Exception as ex:
-        return {"message": "failure", "error": str(ex)}
+    todo = repository.create(Todo.from_text(data["text"]))
+    return todo
 
 
 @app.put('/todo')
+@error_catcher
 async def update():
-    data = await request.json
-    try:
-        todo = repository.update(
-            Todo(id=UUID(data["id"]),
-                 text=data["text"],
-                 create_time=data["create_time"],
-                 status=data["status"],
-                 resolve_time=data["resolve_time"]
-                 ))
-        return {"message": "success", "data": todo}
-
-    except Exception as ex:
-        return {"message": "failure", "error": str(ex)}
+    json = await request.json
+    todo = repository.update(Todo.from_json(json))
+    return todo
 
 
 @app.delete('/todo/<id>')
+@error_catcher
 async def delete(id: str):
-    try:
-        repository.delete(id)
-        return {"message": "delete succes"}
-    except Exception as ex:
-
-        return {"message": "failure", "error": str(ex)}
+    repository.delete(id)
+    return {"message": "delete succes"}
